@@ -1,0 +1,112 @@
+service: todolist-api
+
+frameworkVersion: '3'
+
+useDotenv: true
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: ${opt:region, 'eu-west-3'}
+  stage: ${opt:stage, 'dev'}
+  memorySize: 256
+  timeout: 10
+  environment:
+    MONGODB_URI: ${env:MONGODB_URI}
+    MONGODB_DB_NAME: ${env:MONGODB_DB_NAME, 'todolist'}
+  httpApi:
+    cors: true
+
+plugins:
+  - serverless-esbuild
+  - serverless-dotenv-plugin
+  - serverless-offline
+
+custom:
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: true
+    target: node20
+    platform: node
+    exclude:
+      - '@aws-sdk/*'
+
+functions:
+  # --- Lists CRUD ---
+  createList:
+    handler: src/handlers/lists/create.handler
+    events:
+      - httpApi:
+          path: /lists
+          method: post
+
+  getAllLists:
+    handler: src/handlers/lists/getAll.handler
+    events:
+      - httpApi:
+          path: /lists
+          method: get
+
+  getListById:
+    handler: src/handlers/lists/getById.handler
+    events:
+      - httpApi:
+          path: /lists/{id}
+          method: get
+
+  updateList:
+    handler: src/handlers/lists/update.handler
+    events:
+      - httpApi:
+          path: /lists/{id}
+          method: put
+
+  deleteList:
+    handler: src/handlers/lists/remove.handler
+    events:
+      - httpApi:
+          path: /lists/{id}
+          method: delete
+
+  # --- Todos CRUD ---
+  createTodo:
+    handler: src/handlers/todos/create.handler
+    events:
+      - httpApi:
+          path: /todos
+          method: post
+
+  getAllTodos:
+    handler: src/handlers/todos/getAll.handler
+    events:
+      - httpApi:
+          path: /todos
+          method: get
+
+  getTodoById:
+    handler: src/handlers/todos/getById.handler
+    events:
+      - httpApi:
+          path: /todos/{id}
+          method: get
+
+  updateTodo:
+    handler: src/handlers/todos/update.handler
+    events:
+      - httpApi:
+          path: /todos/{id}
+          method: put
+
+  deleteTodo:
+    handler: src/handlers/todos/remove.handler
+    events:
+      - httpApi:
+          path: /todos/{id}
+          method: delete
+
+package:
+  individually: true
+  patterns:
+    - '!tests/**'
+    - '!README.md'
