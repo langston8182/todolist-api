@@ -1,0 +1,15 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+  pre_build:
+    commands:
+      - npm ci
+  build:
+    commands:
+      - echo "Déploiement du stage $STAGE"
+      - npm run test:unit
+      - npm run test:integration
+      - npx serverless deploy --stage $STAGE --region $AWS_REGION_DEPLOY --verbose
