@@ -16,21 +16,21 @@ Récupère le `ConnectionArn` retourné, puis va dans la console AWS :
 
 > Cette étape manuelle (clic dans la console) est obligatoire : AWS ne peut pas authentifier GitHub en CLI pur.
 
-## 2. Stocker les URI MongoDB dans SSM Parameter Store (SecureString)
+## 2. Secret Secrets Manager (déjà créé)
 
-```bash
-aws ssm put-parameter \
-  --name "/todolist-api/dev/MONGODB_URI" \
-  --type SecureString \
-  --value "mongodb+srv://user:pass@todolist-preprod.xxxxx.mongodb.net/?retryWrites=true&w=majority" \
-  --region eu-west-3
+Le secret `todolist/secrets` contient déjà les deux environnements :
 
-aws ssm put-parameter \
-  --name "/todolist-api/prod/MONGODB_URI" \
-  --type SecureString \
-  --value "mongodb+srv://user:pass@todolist-prod.xxxxx.mongodb.net/?retryWrites=true&w=majority" \
-  --region eu-west-3
+```json
+{
+  "preprod": { "MONGO_URI": "...", "DB_NAME": "todolist" },
+  "prod": { "MONGO_URI": "...", "DB_NAME": "todolist" }
+}
 ```
+
+Le stage `dev` du pipeline lit la clé `preprod`, le stage `prod` lit la clé `prod`.
+Chaque build récupère le secret via `aws secretsmanager get-secret-value` et exporte
+`MONGODB_URI` / `MONGODB_DB_NAME` avant `serverless deploy` (voir `buildspec-dev.yml` /
+`buildspec-prod.yml`).
 
 ## 3. Déployer le pipeline (CloudFormation)
 
@@ -44,7 +44,9 @@ aws cloudformation deploy \
       CodeStarConnectionArn=<ARN_DE_LA_CONNEXION> \
       GitHubOwner=langston8182 \
       GitHubRepo=todolist-api \
-      GitHubBranch=main
+      GitHubBranch=main \
+      SecretsManagerSecretName=todolist/secrets \
+      SecretsManagerSecretArn=arn:aws:secretsmanager:eu-west-3:489767271637:secret:todolist/secrets-RUZqf1
 ```
 
 ## 4. Déclenchement

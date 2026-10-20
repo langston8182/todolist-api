@@ -19,14 +19,15 @@ Parameters:
     Description: >
       ARN de la connexion CodeStar GitHub (créée et approuvée manuellement
       au préalable dans la console AWS - voir README infra).
-  DevMongoUriParam:
+  SecretsManagerSecretName:
     Type: String
-    Default: /todolist-api/dev/MONGODB_URI
-    Description: Nom du paramètre SSM SecureString contenant l'URI MongoDB (dev)
-  ProdMongoUriParam:
+    Default: todolist/secrets
+    Description: >
+      Nom du secret Secrets Manager contenant les clés "preprod" et "prod",
+      chacune avec MONGO_URI et DB_NAME.
+  SecretsManagerSecretArn:
     Type: String
-    Default: /todolist-api/prod/MONGODB_URI
-    Description: Nom du paramètre SSM SecureString contenant l'URI MongoDB (prod)
+    Description: ARN du secret Secrets Manager (pour restreindre l'accès IAM)
   DeployRegion:
     Type: String
     Default: eu-west-3
@@ -75,14 +76,12 @@ Resources:
                   - s3:PutObject
                 Resource:
                   - !Sub '${ArtifactBucket.Arn}/*'
-              - Sid: SsmParams
+              - Sid: SecretsManager
                 Effect: Allow
                 Action:
-                  - ssm:GetParameter
-                  - ssm:GetParameters
+                  - secretsmanager:GetSecretValue
                 Resource:
-                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${DevMongoUriParam}'
-                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${ProdMongoUriParam}'
+                  - !Ref SecretsManagerSecretArn
               - Sid: ServerlessDeploy
                 Effect: Allow
                 Action:
@@ -160,13 +159,12 @@ Resources:
         EnvironmentVariables:
           - Name: STAGE
             Value: dev
+          - Name: SECRET_ENV_KEY
+            Value: preprod
           - Name: AWS_REGION_DEPLOY
             Value: !Ref DeployRegion
-          - Name: MONGODB_URI
-            Type: PARAMETER_STORE
-            Value: !Ref DevMongoUriParam
-          - Name: MONGODB_DB_NAME
-            Value: todolist
+          - Name: SECRET_NAME
+            Value: !Ref SecretsManagerSecretName
       Source:
         Type: CODEPIPELINE
         BuildSpec: infra/buildspec-dev.yml
@@ -185,13 +183,12 @@ Resources:
         EnvironmentVariables:
           - Name: STAGE
             Value: prod
+          - Name: SECRET_ENV_KEY
+            Value: prod
           - Name: AWS_REGION_DEPLOY
             Value: !Ref DeployRegion
-          - Name: MONGODB_URI
-            Type: PARAMETER_STORE
-            Value: !Ref ProdMongoUriParam
-          - Name: MONGODB_DB_NAME
-            Value: todolist
+          - Name: SECRET_NAME
+            Value: !Ref SecretsManagerSecretName
       Source:
         Type: CODEPIPELINE
         BuildSpec: infra/buildspec-prod.yml
