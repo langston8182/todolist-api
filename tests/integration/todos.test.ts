@@ -48,7 +48,8 @@ describe('Todos CRUD (integration)', () => {
     expect(result.statusCode).toBe(201);
     const todo = JSON.parse(result.body);
     expect(todo.title).toBe('Acheter du pain');
-    expect(todo.completed).toBe(false);
+    expect(todo.status).toBe('todo');
+    expect(todo.priority).toBe('medium');
     expect(todo.listId).toBe(list._id);
   });
 
@@ -78,13 +79,34 @@ describe('Todos CRUD (integration)', () => {
     const created = JSON.parse(
       (await createTodoHandler(buildEvent({ body: JSON.stringify({ listId: list._id, title: 'Pain' }) }))).body,
     );
+    expect(created.status).toBe('todo');
+    expect(created.priority).toBe('medium');
 
     const updateResult = await updateTodoHandler(
-      buildEvent({ pathParameters: { id: created._id }, body: JSON.stringify({ completed: true }) }),
+      buildEvent({ pathParameters: { id: created._id }, body: JSON.stringify({ status: 'done' }) }),
     );
 
     expect(updateResult.statusCode).toBe(200);
-    expect(JSON.parse(updateResult.body).completed).toBe(true);
+    expect(JSON.parse(updateResult.body).status).toBe('done');
+  });
+
+  it('crée un todo avec priorité et tags personnalisés', async () => {
+    const list = await createTestList();
+    const result = await createTodoHandler(
+      buildEvent({
+        body: JSON.stringify({
+          listId: list._id,
+          title: 'Rapport urgent',
+          priority: 'high',
+          tags: ['urgent', 'travail'],
+        }),
+      }),
+    );
+
+    expect(result.statusCode).toBe(201);
+    const todo = JSON.parse(result.body);
+    expect(todo.priority).toBe('high');
+    expect(todo.tags).toEqual(['urgent', 'travail']);
   });
 
   it('supprime un todo', async () => {

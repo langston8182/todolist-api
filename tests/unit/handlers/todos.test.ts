@@ -4,15 +4,19 @@ jest.mock('../../../src/config/db', () => ({
   connectToDatabase: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('../../../src/models/todo.model', () => ({
-  TodoModel: {
-    create: jest.fn(),
-    find: jest.fn(),
-    findById: jest.fn(),
-    findByIdAndUpdate: jest.fn(),
-    findByIdAndDelete: jest.fn(),
-  },
-}));
+jest.mock('../../../src/models/todo.model', () => {
+  const actual = jest.requireActual('../../../src/models/todo.model');
+  return {
+    ...actual,
+    TodoModel: {
+      create: jest.fn(),
+      find: jest.fn(),
+      findById: jest.fn(),
+      findByIdAndUpdate: jest.fn(),
+      findByIdAndDelete: jest.fn(),
+    },
+  };
+});
 
 jest.mock('../../../src/models/list.model', () => ({
   ListModel: {
@@ -49,7 +53,13 @@ describe('todos handlers (unit)', () => {
   describe('create', () => {
     it('crée un todo avec succès', async () => {
       (ListModel.exists as jest.Mock).mockResolvedValue(true);
-      const fakeTodo = { _id: VALID_ID, listId: VALID_LIST_ID, title: 'Acheter du pain' };
+      const fakeTodo = {
+        _id: VALID_ID,
+        listId: VALID_LIST_ID,
+        title: 'Acheter du pain',
+        status: 'todo',
+        priority: 'medium',
+      };
       (TodoModel.create as jest.Mock).mockResolvedValue(fakeTodo);
 
       const event = buildEvent({
@@ -72,6 +82,24 @@ describe('todos handlers (unit)', () => {
       const event = buildEvent({ body: JSON.stringify({ listId: VALID_LIST_ID }) });
       const result = await createHandler(event);
       expect(result.statusCode).toBe(400);
+    });
+
+    it('retourne 400 si status est invalide', async () => {
+      const event = buildEvent({
+        body: JSON.stringify({ listId: VALID_LIST_ID, title: 'Test', status: 'nope' }),
+      });
+      const result = await createHandler(event);
+      expect(result.statusCode).toBe(400);
+      expect(TodoModel.create).not.toHaveBeenCalled();
+    });
+
+    it('retourne 400 si priority est invalide', async () => {
+      const event = buildEvent({
+        body: JSON.stringify({ listId: VALID_LIST_ID, title: 'Test', priority: 'urgent' }),
+      });
+      const result = await createHandler(event);
+      expect(result.statusCode).toBe(400);
+      expect(TodoModel.create).not.toHaveBeenCalled();
     });
 
     it("retourne 404 si la liste associée n'existe pas", async () => {
@@ -129,17 +157,27 @@ describe('todos handlers (unit)', () => {
 
   describe('update', () => {
     it('met à jour un todo existant', async () => {
-      const updated = { _id: VALID_ID, title: 'Acheter du pain complet', completed: true };
+      const updated = { _id: VALID_ID, title: 'Acheter du pain complet', status: 'done' };
       (TodoModel.findByIdAndUpdate as jest.Mock).mockResolvedValue(updated);
 
       const event = buildEvent({
         pathParameters: { id: VALID_ID },
-        body: JSON.stringify({ title: 'Acheter du pain complet', completed: true }),
+        body: JSON.stringify({ title: 'Acheter du pain complet', status: 'done' }),
       });
       const result = await updateHandler(event);
 
       expect(result.statusCode).toBe(200);
       expect(JSON.parse(result.body)).toEqual(updated);
+    });
+
+    it('retourne 400 si status est invalide', async () => {
+      const event = buildEvent({
+        pathParameters: { id: VALID_ID },
+        body: JSON.stringify({ status: 'nope' }),
+      });
+      const result = await updateHandler(event);
+      expect(result.statusCode).toBe(400);
+      expect(TodoModel.findByIdAndUpdate).not.toHaveBeenCalled();
     });
 
     it("retourne 404 si la nouvelle liste n'existe pas", async () => {
@@ -157,7 +195,7 @@ describe('todos handlers (unit)', () => {
       (TodoModel.findByIdAndUpdate as jest.Mock).mockResolvedValue(null);
       const event = buildEvent({
         pathParameters: { id: VALID_ID },
-        body: JSON.stringify({ completed: true }),
+        body: JSON.stringify({ priority: 'high' }),
       });
       const result = await updateHandler(event);
       expect(result.statusCode).toBe(404);

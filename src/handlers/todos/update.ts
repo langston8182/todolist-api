@@ -1,6 +1,6 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { connectToDatabase } from '../../config/db';
-import { TodoModel } from '../../models/todo.model';
+import { TodoModel, TODO_STATUSES, TODO_PRIORITIES } from '../../models/todo.model';
 import { ListModel } from '../../models/list.model';
 import { success, error } from '../../utils/response';
 import { isValidObjectId } from '../../utils/validation';
@@ -14,10 +14,29 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 
     const body = event.body ? JSON.parse(event.body) : {};
-    const { title, description, completed, dueDate, listId } = body;
+    const {
+      title,
+      description,
+      status,
+      priority,
+      dueDate,
+      completedAt,
+      tags,
+      subtasks,
+      position,
+      listId,
+    } = body;
 
     if (title !== undefined && (typeof title !== 'string' || !title.trim())) {
       return error(400, 'Le champ "title" doit être une chaîne non vide');
+    }
+
+    if (status !== undefined && !TODO_STATUSES.includes(status)) {
+      return error(400, `Le champ "status" doit être l'une des valeurs: ${TODO_STATUSES.join(', ')}`);
+    }
+
+    if (priority !== undefined && !TODO_PRIORITIES.includes(priority)) {
+      return error(400, `Le champ "priority" doit être l'une des valeurs: ${TODO_PRIORITIES.join(', ')}`);
     }
 
     if (listId !== undefined && !isValidObjectId(listId)) {
@@ -36,8 +55,13 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const update: Record<string, unknown> = {};
     if (title !== undefined) update.title = title.trim();
     if (description !== undefined) update.description = description;
-    if (completed !== undefined) update.completed = completed;
+    if (status !== undefined) update.status = status;
+    if (priority !== undefined) update.priority = priority;
     if (dueDate !== undefined) update.dueDate = dueDate;
+    if (completedAt !== undefined) update.completedAt = completedAt;
+    if (tags !== undefined) update.tags = tags;
+    if (subtasks !== undefined) update.subtasks = subtasks;
+    if (position !== undefined) update.position = position;
     if (listId !== undefined) update.listId = listId;
 
     const todo = await TodoModel.findByIdAndUpdate(id, update, {

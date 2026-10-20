@@ -13,7 +13,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 
     const body = event.body ? JSON.parse(event.body) : {};
-    const { name, description } = body;
+    const { name, description, color, archived } = body;
 
     if (name !== undefined && (typeof name !== 'string' || !name.trim())) {
       return error(400, 'Le champ "name" doit être une chaîne non vide');
@@ -24,6 +24,8 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const update: Record<string, unknown> = {};
     if (name !== undefined) update.name = name.trim();
     if (description !== undefined) update.description = description;
+    if (color !== undefined) update.color = color;
+    if (archived !== undefined) update.archived = archived;
 
     const list = await ListModel.findByIdAndUpdate(id, update, {
       new: true,

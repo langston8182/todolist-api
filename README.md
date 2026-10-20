@@ -26,17 +26,28 @@ serverless.yml           # Définition des fonctions Lambda + routes HTTP API
 
 ## Modèle de données
 
+> Ces schémas correspondent aux validateurs `$jsonSchema` déjà définis sur les
+> collections MongoDB Atlas (`lists`, `todos`). Toute insertion non conforme
+> est rejetée par MongoDB (`Document failed validation`).
+
 **List**
-- `name` (string, requis)
+- `name` (string, requis, 1-100 caractères)
 - `description` (string, optionnel)
+- `color` (string, optionnel, format hex `#RRGGBB`)
+- `archived` (boolean, requis, défaut `false`)
 - `createdAt` / `updatedAt`
 
 **Todo**
 - `listId` (ObjectId, requis, référence une `List`)
-- `title` (string, requis)
+- `title` (string, requis, 1-200 caractères)
 - `description` (string, optionnel)
-- `completed` (boolean, défaut `false`)
-- `dueDate` (date, optionnel)
+- `status` (enum `todo` | `in_progress` | `done`, requis, défaut `todo`)
+- `priority` (enum `low` | `medium` | `high`, requis, défaut `medium`)
+- `dueDate` (date ou `null`, optionnel)
+- `completedAt` (date ou `null`, optionnel)
+- `tags` (array de strings, optionnel)
+- `subtasks` (array de `{ _id, title, done }`, optionnel)
+- `position` (number, optionnel)
 - `createdAt` / `updatedAt`
 
 > Supprimer une liste supprime en cascade tous ses todos associés.

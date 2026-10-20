@@ -8,13 +8,13 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     await connectToDatabase();
 
     const body = event.body ? JSON.parse(event.body) : {};
-    const { name, description } = body;
+    const { name, description, color, archived } = body;
 
     if (!name || typeof name !== 'string' || !name.trim()) {
       return error(400, 'Le champ "name" est obligatoire');
     }
 
-    const list = await ListModel.create({ name: name.trim(), description });
+    const list = await ListModel.create({ name: name.trim(), description, color, archived });
 
     return success(201, list);
   } catch (err: any) {
