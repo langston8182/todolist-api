@@ -15,7 +15,26 @@ provider:
     MONGODB_URI: ${env:MONGODB_URI}
     MONGODB_DB_NAME: ${env:MONGODB_DB_NAME, 'todolist'}
   httpApi:
-    cors: true
+    cors:
+      allowedOrigins:
+        - http://localhost:3000
+        - http://localhost:5173
+      allowedHeaders:
+        - content-type
+        - x-amz-date
+        - authorization
+        - x-api-key
+        - x-amz-security-token
+        - x-amz-user-agent
+        - x-amzn-trace-id
+      allowedMethods:
+        - OPTIONS
+        - GET
+        - POST
+        - PUT
+        - DELETE
+      allowCredentials: true
+      maxAge: 0
 
 plugins:
   - serverless-esbuild
